@@ -1,5 +1,42 @@
-import { addFile } from '../core/storage.js'
+import { unixfs } from '@helia/unixfs'
 
+/**
+ * Stores encoded data fragments in Helia and returns their CIDs.
+ * @param {Object} helia - The Helia instance.
+ * @param {Buffer[]} fragments - Array of encoded data fragments.
+ * @returns {Promise<string[]>} - Array of CIDs for the stored fragments.
+ */
 export async function storeFragments(helia, fragments) {
-  return await Promise.all(fragments.map(f => addFile(helia, f)))
+  const fs = unixfs(helia)
+  
+  // Store each fragment in Helia and collect the CIDs
+  const cids = await Promise.all(fragments.map(async (fragment) => {
+    const cid = await fs.addBytes(fragment)
+    console.log(`Stored fragment with CID: ${cid.toString()}`)
+    return cid.toString() // Convert CID to string
+  }))
+
+  return cids
+}
+
+/**
+ * Retrieves stored fragments from Helia using their CIDs.
+ * @param {Object} helia - The Helia instance.
+ * @param {string[]} cids - Array of CIDs for the fragments.
+ * @returns {Promise<Buffer[]>} - Array of retrieved data fragments.
+ */
+export async function retrieveFragments(helia, cids) {
+  const fs = unixfs(helia)
+  
+  // Retrieve each fragment by CID
+  const fragments = await Promise.all(cids.map(async (cid) => {
+    const content = []
+    for await (const chunk of fs.cat(cid)) {
+      content.push(chunk)
+    }
+    console.log(`Retrieved fragment for CID: ${cid}`)
+    return Buffer.concat(content)
+  }))
+
+  return fragments
 }

@@ -1,8 +1,10 @@
 {
   "type": "module",
   "dependencies": {
-    "@helia/core": "^0.0.0",
     "@helia/unixfs": "^4.0.0",
+    "blockstore-core": "^5.0.2",
+    "helia": "^5.1.0",
+    "node": "^18.20.5",
     "reed-solomon-erasure": "^0.1.0"
   },
   "devDependencies": {
