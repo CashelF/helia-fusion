@@ -1,0 +1,11 @@
+{
+  "type": "module",
+  "dependencies": {
+    "@helia/core": "^0.0.0",
+    "@helia/unixfs": "^4.0.0",
+    "reed-solomon-erasure": "^0.1.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
