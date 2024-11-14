@@ -1,5 +1,5 @@
 import { initHelia } from './core/heliaNode.js'
-import { encodeData } from './fusion/encoder.js'
+import { decodeData, encodeData } from './fusion/encoder.js'
 import { storeFragments, retrieveFragments } from './fusion/distribute.js'
 
 async function main() {
@@ -18,8 +18,11 @@ async function main() {
   const cids = await storeFragments(helia, fragments)
   console.log('Stored CIDs:', cids)
 
-  const recoveredData = await retrieveFragments(helia, cids)
-  console.log('Recovered Data:', recoveredData.toString())
+  const recoveredData = await retrieveFragments(helia, cids);
+  for (let i = 0; i < recoveredData.length; i++) {
+    const decodedData = decodeData(recoveredData[i]);
+    console.log('Recovered Data:', new TextDecoder().decode(decodedData));
+  }
 }
 
 main()

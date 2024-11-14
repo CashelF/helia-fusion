@@ -25,7 +25,7 @@ export function encodeData(data, parityBytes = 10) { // Default value for parity
  * @returns {Uint8Array} - The corrected data.
  * @throws {Error} - If decoding fails due to too many errors.
  */
-export function decodeData(data, parityBytes) {
+export function decodeData(data, parityBytes=10) {
   const field = GenericGF.QR_CODE_FIELD_256();
   const decoder = new ReedSolomonDecoder(field);
 
