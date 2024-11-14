@@ -518,14 +518,16 @@ GenericGF.DATA_MATRIX_FIELD_256 = lazy(function () { return new GenericGF(0x012D
 GenericGF.AZTEC_DATA_8 = GenericGF.DATA_MATRIX_FIELD_256;
 GenericGF.MAXICODE_FIELD_64 = GenericGF.AZTEC_DATA_6;
 
-this.GenericGF = GenericGF;
-this.GenericGFPoly = GenericGFPoly;
-this.ReedSolomonEncoder = ReedSolomonEncoder;
-this.ReedSolomonDecoder = ReedSolomonDecoder;
 
-function dump (array) {
-	console.log(Array.prototype.join.call(array));
-}
+export { GenericGF, GenericGFPoly, ReedSolomonEncoder, ReedSolomonDecoder };
+// this.GenericGF = GenericGF;
+// this.GenericGFPoly = GenericGFPoly;
+// this.ReedSolomonEncoder = ReedSolomonEncoder;
+// this.ReedSolomonDecoder = ReedSolomonDecoder;
 
-// Add these export statements at the bottom of the file:
+// function dump (array) {
+// 	console.log(Array.prototype.join.call(array));
+// }
+
+// // Add these export statements at the bottom of the file:
 // export { GenericGF, GenericGFPoly, ReedSolomonEncoder, ReedSolomonDecoder };

@@ -6,7 +6,7 @@ import { ReedSolomonEncoder, ReedSolomonDecoder, GenericGF } from './reedsolomon
  * @param {number} parityBytes - Number of parity bytes to add for error correction.
  * @returns {Uint8Array} - The encoded data including parity bytes.
  */
-export function encodeData(data, parityBytes) {
+export function encodeData(data, parityBytes = 10) { // Default value for parityBytes is 10
   const totalLength = data.length + parityBytes;
   const toEncode = new Uint8Array(totalLength);
   toEncode.set(data); // Copy data into the first part of the array
