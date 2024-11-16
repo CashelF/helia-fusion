@@ -1,27 +1,27 @@
 class PrimNode {
-    constructor(value) {
-        this.value = value;
-        this.auxNode = null;
-    }
+  constructor(value) {
+    this.value = value;
+    this.auxNode = null;
+  }
 }
 
 class AuxNode {
-    constructor(primNode) {
-        this.primNode = primNode;
-        this.fusedNode = null;
-    }
+  constructor(primNode) {
+    this.primNode = primNode;
+    this.fusedNode = null;
+  }
 }
 
 class FusedNode {
-    constructor() {
-        this.value = 0;
-        this.refCount = 0;
-    }
+  constructor() {
+    this.value = 0;
+    this.refCount = 0;
+  }
 
-    updateCode(oldValue, newValue) {
-        // Update the value of the fused node
-        this.value = newValue;
-    }
+  updateCode(oldValue, newValue) {
+    // Update the value of the fused node
+    this.value = newValue;
+  }
 }
 
 class BackupStack {
@@ -66,51 +66,51 @@ class BackupStack {
 // Helper Methods (for managing linked lists, etc.)
 
 class LinkedNode {
-    constructor(key, value) {
-        this.key = key;
-        this.value = value;
-        this.next = null;
-    }
+  constructor(key, value) {
+    this.key = key;
+    this.value = value;
+    this.next = null;
+  }
 }
 
 class LinkedList {
-    constructor() {
-        this.head = null;
-        this.tail = null;
-    }
+  constructor() {
+    this.head = null;
+    this.tail = null;
+  }
 
-    insertAtEnd(node) {
-        if (!this.tail) {
-        this.head = this.tail = node;
-        } else {
-        this.tail.next = node;
-        this.tail = node;
-        }
+  insertAtEnd(node) {
+    if (!this.tail) {
+    this.head = this.tail = node;
+    } else {
+    this.tail.next = node;
+    this.tail = node;
     }
+  }
 
-    contains(key) {
-        let current = this.head;
-        while (current) {
-        if (current.key === key) return true;
-        current = current.next;
-        }
-        return false;
+  contains(key) {
+    let current = this.head;
+    while (current) {
+    if (current.key === key) return true;
+    current = current.next;
     }
+    return false;
+  }
 
-    get(key) {
-        let current = this.head;
-        while (current) {
-        if (current.key === key) return current;
-        current = current.next;
-        }
-        return null;
+  get(key) {
+    let current = this.head;
+    while (current) {
+      if (current.key === key) return current;
+      current = current.next;
     }
+    return null;
+  }
 
-    insert(key, node) {
-        const newNode = new LinkedNode(key, node);
-        this.insertAtEnd(newNode);
-    }
-    }
+  insert(key, node) {
+    const newNode = new LinkedNode(key, node);
+    this.insertAtEnd(newNode);
+  }
+}
   
 
 // export functions to use in other modules
