@@ -1,6 +1,6 @@
 import { initHelia } from './core/heliaNode.js'
 import { decodeData, encodeData } from './fusion/encoder.js'
-import { storeFragments, retrieveFragments } from './fusion/distribute.js'
+import { storeshards, retrieveshards } from './fusion/distribute.js'
 
 async function main() {
   const helia = await initHelia()
@@ -9,16 +9,16 @@ async function main() {
   const other_data = Buffer.from('Bye, fault-tolerant world!')
   const buffer = encodeData(data)
   const other_buffer = encodeData(other_data)
-  // turn fragments into a list of buffers
-  const fragments = [buffer, other_buffer]
+  // turn shards into a list of buffers
+  const shards = [buffer, other_buffer]
 
 
 
-  console.log('Encoded Fragments:', fragments)
-  const cids = await storeFragments(helia, fragments)
+  console.log('Encoded shards:', shards)
+  const cids = await storeshards(helia, shards)
   console.log('Stored CIDs:', cids)
 
-  const recoveredData = await retrieveFragments(helia, cids);
+  const recoveredData = await retrieveshards(helia, cids);
   for (let i = 0; i < recoveredData.length; i++) {
     const decodedData = decodeData(recoveredData[i]);
     console.log('Recovered Data:', new TextDecoder().decode(decodedData));
@@ -29,7 +29,7 @@ main()
 
 // import { initHelia } from './core/heliaNode.js'
 // import { BackupStack, LinkedList, PrimNode, AuxNode, FusedNode } from './fusion/fusion.js' // Assuming fusion logic is in this module
-// import { storeFragments, retrieveFragments } from './fusion/distribute.js'
+// import { storeshards, retrieveshards } from './fusion/distribute.js'
 
 // async function main() {
 //   const helia = await initHelia()
@@ -70,11 +70,11 @@ main()
 //   }
 
 //   // Simulate data retrieval from backups
-//   const cids = await storeFragments(helia, data);
+//   const cids = await storeshards(helia, data);
 //   console.log('Stored CIDs:', cids);
 
 //   // Simulate data retrieval and fusion from backups
-//   const recoveredData = await retrieveFragments(helia, cids);
+//   const recoveredData = await retrieveshards(helia, cids);
 //   console.log('Recovered Data:', recoveredData.toString());
 
 //   // Simulate deletion of data at Primaries and Backups
