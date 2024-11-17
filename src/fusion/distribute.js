@@ -1,96 +1,69 @@
-import { unixfs } from '@helia/unixfs'
+import { CID } from 'multiformats/cid';
 
-/**
- * Stores encoded data shards in Helia and returns their CIDs.
- * @param {Object} helia - The Helia instance.
- * @param {Buffer[]} shards - Array of encoded data shards.
- * @returns {Promise<string[]>} - Array of CIDs for the stored shards.
- */
-export async function storeshards(helia, shards) {
-  const fs = unixfs(helia)
-
-  console.log('Storing shards:', shards)
+export async function storeFile(primaryFs, backupFs, fileContent) {
+  const cid = addFileToPrimary(primaryFs, fileContent);
   
-  // Store each shard in Helia and collect the CIDs
-  const cids = await Promise.all(shards.map(async (shard) => {
-    const cid = await fs.addBytes(shard)
-    console.log(`Stored shard with CID: ${cid.toString()}`)
-    console.log(`Stored shard with CID: ${cid.toString()}`)
-    return cid.toString() // Convert CID to string
-  }))
+  // get the fused file from one of the backup nodes, then re-fuse the files and replace the shards in the backup nodes
+  for (const fs of backupFs) {
+    addFileToBackup(fs, fileContent);
+  }
 
-  return cids
+  return cid;
 }
 
-/**
- * Retrieves stored shards from Helia using their CIDs.
- * @param {Object} helia - The Helia instance.
- * @param {string[]} cids - Array of CIDs for the shards.
- * @returns {Promise<Buffer[]>} - Array of retrieved data shards.
- */
-export async function retrieveshards(helia, cids) {
-  const fs = unixfs(helia)
+async function addFileToPrimary(fs, fileContent) {
+  const cid = await fs.add(fileContent); // Store file in primary network
+  console.log(`File added to primary network with CID: ${cid}`);
+  return cid;
+}
+
+async function addFileToBackup(fs, fileContent) {
+  // retrieve the file from the backup network, then re-fuse the files and replace the shards in the backup
   
-  // Retrieve each shard by CID
-  const shards = await Promise.all(cids.map(async (cid) => {
-    const content = []
+  
+  const shardCids = await getShardsCids(fs, 1); // CID 1 is the root CID of the backup file (potentially)
+  const shards = await retrieveShards(fs, shardCids); // Retrieve the shards
+  //now just shard up the fileContent, and reed solomon it with the shards retrieved from the backup, then replace everything with the new file generated from that
+  
+}
+
+async function getShardsCids(fs, rootCid) {
+  const dagNode = await fs.get(rootCid); // Fetch the DAG root node
+  const links = dagNode.Links; // Links to child shards
+
+  return links.map(link => link.Cid); // Return the CIDs of individual shards
+}
+
+async function retrieveShards(fs, shardCids) {
+  const shards = [];
+
+  for (const cid of shardCids) {
+    const shardData = [];
     for await (const chunk of fs.cat(cid)) {
-      content.push(chunk)
+      shardData.push(chunk);
     }
-    console.log(`Retrieved shard for CID: ${cid}`)
-    return Buffer.concat(content)
-  }))
+    shards.push(Buffer.concat(shardData));
+  }
 
-  return shards
+  return shards;
 }
 
-// import { unixfs } from '@helia/unixfs'
 
-// /**
-//  * Stores encoded data shards in Helia and returns their CIDs.
-//  * @param {Object} helia - The Helia instance.
-//  * @param {Buffer[]} shards - Array of encoded data shards.
-//  * @returns {Promise<string[]>} - Array of CIDs for the stored shards.
-//  */
-// export async function storeshards(helia, shards) {
-//   const fs = unixfs(helia)
-  
-//   try {
-//     // Store each shard in Helia and collect the CIDs
-//     const cids = await Promise.all(shards.map(async (shard) => {
-//       const cid = await fs.addBytes(shard)
-//       console.log(`Stored shard with CID: ${cid.toString()}`)
-//       return cid.toString() // Convert CID to string
-//     }))
-//     return cids
-//   } catch (error) {
-//     console.error('Error storing shards:', error)
-//     throw error
-//   }
-// }
+export async function retrieveFile(fs, cidString) {
+  try {
+    // Step 1: Parse the CID
+    const cid = CID.parse(cidString);
 
-// /**
-//  * Retrieves stored shards from Helia using their CIDs.
-//  * @param {Object} helia - The Helia instance.
-//  * @param {string[]} cids - Array of CIDs for the shards.
-//  * @returns {Promise<Buffer[]>} - Array of retrieved data shards.
-//  */
-// export async function retrieveshards(helia, cids) {
-//   const fs = unixfs(helia)
-  
-//   try {
-//     // Retrieve each shard by CID
-//     const shards = await Promise.all(cids.map(async (cid) => {
-//       const content = []
-//       for await (const chunk of fs.cat(cid)) {
-//         content.push(chunk)
-//       }
-//       console.log(`Retrieved shard for CID: ${cid}`)
-//       return Buffer.concat(content)
-//     }))
-//     return shards
-//   } catch (error) {
-//     console.error('Error retrieving shards:', error)
-//     throw error
-//   }
-// }
+    // Step 2: Retrieve the shard using Helia's `cat` method
+    const retrievedData = [];
+    for await (const chunk of fs.cat(cid)) {
+      retrievedData.push(chunk);
+    }
+
+    console.log('Shard successfully retrieved');
+    return Buffer.concat(retrievedData);
+  } catch (error) {
+    console.error('Failed to retrieve shard:', error);
+    throw error;
+  }
+}
