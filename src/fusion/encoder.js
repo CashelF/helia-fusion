@@ -1,38 +1,51 @@
-import { ReedSolomonEncoder, ReedSolomonDecoder, GenericGF } from './reedsolomon.js';
+import { GenericGF, ReedSolomonEncoder } from './reedsolomon.js';
 
 /**
- * Encode data using Reed-Solomon error correction.
- * @param {Uint8Array} data - The data to encode.
- * @param {number} parityBytes - Number of parity bytes to add for error correction.
- * @returns {Uint8Array} - The encoded data including parity bytes.
+ * Initializes a Reed-Solomon encoder with the specified field.
  */
-export function encodeData(data, parityBytes = 10) { // Default value for parityBytes is 10
-  const totalLength = data.length + parityBytes;
-  const toEncode = new Uint8Array(totalLength);
-  toEncode.set(data); // Copy data into the first part of the array
-
-  const field = GenericGF.QR_CODE_FIELD_256();
-  const encoder = new ReedSolomonEncoder(field);
-
-  encoder.encode(toEncode, parityBytes);
-  return toEncode;
+function initEncoder() {
+  const field = GenericGF.QR_CODE_FIELD_256(); // Use 256-symbol Galois field
+  return new ReedSolomonEncoder(field);
 }
 
 /**
- * Decode data and correct errors using Reed-Solomon error correction.
- * @param {Uint8Array} data - The data to decode.
- * @param {number} parityBytes - Number of parity bytes used during encoding.
- * @returns {Uint8Array} - The corrected data.
- * @throws {Error} - If decoding fails due to too many errors.
+ * Combines an existing backup shard with a primary shard using XOR.
+ * @param {Buffer} existingBackup - The existing backup shard.
+ * @param {Buffer} primaryShard - The primary shard to combine.
+ * @returns {Buffer} The combined shard.
  */
-export function decodeData(data, parityBytes=10) {
-  const field = GenericGF.QR_CODE_FIELD_256();
-  const decoder = new ReedSolomonDecoder(field);
+function combineShards(existingBackup, primaryShard) {
+  const combinedLength = Math.max(existingBackup.length, primaryShard.length);
+  const combined = Buffer.alloc(combinedLength);
 
-  const received = new Int32Array(data); // Convert to Int32Array for decoding
+  for (let i = 0; i < combinedLength; i++) {
+    const existingByte = existingBackup[i] || 0;
+    const primaryByte = primaryShard[i] || 0;
+    combined[i] = existingByte ^ primaryByte; // XOR combination
+  }
 
-  decoder.decode(received, parityBytes);
-
-  // Extract the original data
-  return new Uint8Array(received.subarray(0, data.length - parityBytes));
+  return combined;
 }
+
+/**
+ * Generates parity shards from a list of combined shards.
+ * @param {Array<Buffer>} combinedShards - The combined shards (primary + existing backup).
+ * @param {number} parityLength - The number of parity bytes to generate per shard.
+ * @returns {Array<Buffer>} The parity shards.
+ */
+function generateParityShards(combinedShards, parityLength = 1024 * 1024) { // Default to 1KB parity shards
+  const encoder = initEncoder();
+  const parityShards = combinedShards.map((shard) => {
+    const shardBuffer = new Int32Array([...shard]); // Convert Buffer to Int32Array
+    const fullBuffer = new Int32Array(shardBuffer.length + parityLength);
+    fullBuffer.set(shardBuffer);
+
+    // encoder.encode(fullBuffer, parityLength); // Generate parity bytes in place
+    // ^ maybe is too slow, struggling encoding 1024 KB
+    return Buffer.from(fullBuffer.buffer, fullBuffer.byteLength - parityLength, parityLength);
+  });
+
+  return parityShards;
+}
+
+export { combineShards, generateParityShards };
