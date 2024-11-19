@@ -1,5 +1,7 @@
 import { GenericGF, ReedSolomonEncoder } from './reedsolomon.js';
 
+const numFaults = 1; // Number of faults to tolerate
+
 /**
  * Initializes a Reed-Solomon encoder with the specified field.
  */
@@ -15,16 +17,7 @@ function initEncoder() {
  * @returns {Buffer} The combined shard.
  */
 function combineShards(existingBackup, primaryShard) {
-  const combinedLength = Math.max(existingBackup.length, primaryShard.length);
-  const combined = Buffer.alloc(combinedLength);
-
-  for (let i = 0; i < combinedLength; i++) {
-    const existingByte = existingBackup[i] || 0;
-    const primaryByte = primaryShard[i] || 0;
-    combined[i] = existingByte ^ primaryByte; // XOR combination
-  }
-
-  return combined;
+  return Buffer.concat([existingBackup, primaryShard]);
 }
 
 /**
@@ -33,7 +26,7 @@ function combineShards(existingBackup, primaryShard) {
  * @param {number} parityLength - The number of parity bytes to generate per shard.
  * @returns {Array<Buffer>} The parity shards.
  */
-function generateParityShards(combinedShards, parityLength = 1024 * 1024) { // Default to 1KB parity shards
+function generateParityShards(combinedShards, parityLength = numFaults * 1024 * 1024) { 
   const encoder = initEncoder();
   const parityShards = combinedShards.map((shard) => {
     const shardBuffer = new Int32Array([...shard]); // Convert Buffer to Int32Array

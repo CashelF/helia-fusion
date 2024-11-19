@@ -19,11 +19,13 @@ async function main() {
   const backupNode1 = await createNode();
   const { ipnsManager: backupIPNSManager, privateKey: backupPrivateKey } = await initHeliaNodeWithIpns(backupNode1);
   const backupFS1 = unixfs(backupNode1)
+  const backupFilesystems = [backupFS1]
+  const backupNodes = [backupNode1]
 
   // Store a file on primaryNode1 and distribute to backup nodes
   const fileContent = await fileSys.readFile('./hello-world.txt')
   const fileObject = { content: fileContent };
-  const cid = await storeFile(primFS1, backupFS1, primaryNode1, backupNode1, backupIPNSManager, backupPrivateKey, fileObject);
+  const cid = await storeFile(primFS1, backupFilesystems, primaryNode1, backupNodes, backupIPNSManager, backupPrivateKey, fileObject);
 
   console.log(`File stored with CID: ${cid}`);
 

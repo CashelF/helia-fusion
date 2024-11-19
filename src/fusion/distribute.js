@@ -5,12 +5,12 @@ import { getCidFromIPNS, latestBackupCID, setLatestBackupCID } from './ipns.js';
 import { peerIdFromCID } from '@libp2p/peer-id';
 
 
-export async function storeFile(primaryFs, backupFs, primNode, backupNode, backupIPNSManager, backupPrivateKey, fileObject) {
+export async function storeFile(primaryFs, backupFilesystems, primNode, backupNodes, backupIPNSManager, backupPrivateKey, fileObject) {
   // console.log(primNode.blockstore.pins.getCodec());
   // console.log(primNode.pins.getCodec());
   console.log("ADD TO PRIMARY");
 
-  const cid = await addFileToPrimary(primaryFs, fileObject);
+  const cid = await addFileToPrimary(primNode, primaryFs, fileObject);
   // console.log("Dag Type: ", cid.code);
   // console.log(primNode.blockstore.pins.getCodec(cid));
 
@@ -19,57 +19,53 @@ export async function storeFile(primaryFs, backupFs, primNode, backupNode, backu
   const primShards = await retrieveShards(primaryFs, primShardCids);
   
   console.log("ADD TO BACKUP");
-  addFileToBackup(backupNode, backupFs, backupIPNSManager, backupPrivateKey, primShards);
+  addFileToBackups(backupNodes, backupFilesystems, backupIPNSManager, backupPrivateKey, primShards);
 
   return cid;
 }
 
-async function addFileToPrimary(fs, fileObject) {
+async function addFileToPrimary(node, fs, fileObject) {
   const cid = await fs.addFile(fileObject); // Store file in primary network
+  await node.pins.add(cid); // Ensure file shards are saved on the one node
   console.log(`File added to primary network with CID: ${cid}`);
   return cid;
 }
 
-async function addFileToBackup(node, fs, backupIPNSManager, backupPrivateKey, primShards) {
-  // Step 1: Retrieve existing backup shards or initialize empty buffers
-  let backupShardCids;
-  try {
-    const backupDAGCid = await backupIPNSManager.resolve(backupPrivateKey.publicKey);
-    backupShardCids = await getAllShardsCids(node, latestBackupCID); // make backupDAGCid when IPNS is working
-  } catch {
-    console.log('No existing backup.');
-    backupShardCids = [];
+async function addFileToBackups(nodes, filesystems, backupIPNSManager, backupPrivateKey, primShards) {
+  for (let i = 0; i < nodes.length; i++) {
+    // Step 1: Retrieve existing backup shards or initialize empty buffers
+    let backupShardCids;
+    try {
+      const backupDAGCid = await backupIPNSManager.resolve(backupPrivateKey.publicKey);
+      backupShardCids = await getAllShardsCids(nodes[i], latestBackupCID); // make backupDAGCid when IPNS is working
+    } catch {
+      console.log('No existing backup.');
+      backupShardCids = [];
+    }
+
+    const backupShards = await retrieveShards(filesystems[i], backupShardCids);
+
+    // Step 2: Combine primary shards with existing backup shards
+    const combinedShards = primShards.map((primaryShard, j) => {
+      return j < backupShards.length ? combineShards(backupShards[j], primaryShard) : primaryShard;
+    });
+
+    // Step 3: Generate parity shards
+    const parityShards = generateParityShards(combinedShards);
+
+    // Step 4: Store updated parity shards back into the backup
+    const newBackupCids = [];
+    for (const shard of parityShards) {
+      const cid = await filesystems[i].addBytes(Buffer.from(shard, i * 1024 * 1024, 1024 * 1024)); // As long as the ordering of nodes stays the same, each backup node will store different parity shards
+      newBackupCids.push(cid);
+      console.log(`Updated backup shard stored with CID: ${cid}`);
+    }
+
+    const rootBackupCid = await filesystems[i].addDirectory(newBackupCids);
+    setLatestBackupCID(rootBackupCid);
+
+    console.log('Backup updated successfully.');
   }
-
-  const backupShards = await retrieveShards(fs, backupShardCids);
-
-  // Step 2: Combine primary shards with existing backup shards
-  const combinedShards = primShards.map((primaryShard, i) => {
-    return i < backupShards.length ? combineShards(backupShards[i], primaryShard) : primaryShard;
-  });
-
-  // console.log('Combined shards len:', combinedShards.length);
-
-  // Step 3: Generate parity shards
-  const parityShards = generateParityShards(combinedShards);
-
-  // Step 4: Store updated parity shards back into the backup
-  const newBackupCids = [];
-  for (const shard of parityShards) {
-    const cid = await fs.addBytes(shard); // is addBytes the right one to use? i need something that adds just 1 shard
-    newBackupCids.push(cid);
-    console.log(`Updated backup shard stored with CID: ${cid}`);
-  }
-
-  const rootBackupCid = await fs.addDirectory(newBackupCids);
-  // console.log(`New backup DAG root CID: ${rootBackupCid}`);
-  setLatestBackupCID(rootBackupCid);
-
-  // console.log("backupPrivateKey: ", backupPrivateKey);
-  // await backupIPNSManager.publish(peerIdFromCID(rootBackupCid), rootBackupCid);
-  // console.log(`Published new root CID to IPNS: ${rootBackupCid}`);
-
-  console.log('Backup updated successfully.');
 }
 
 async function getAllShardsCids(node, rootCid) {
