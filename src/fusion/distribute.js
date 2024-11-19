@@ -3,6 +3,7 @@ import * as dagPb from '@ipld/dag-pb';
 import { combineShards, generateParityShards } from './encoder.js';
 import { getCidFromIPNS, latestBackupCID, setLatestBackupCID } from './ipns.js';
 import { peerIdFromCID } from '@libp2p/peer-id';
+import { fixedSize } from 'ipfs-unixfs-importer/chunker'
 
 
 export async function storeFile(primaryFs, backupFilesystems, primNode, backupNodes, backupIPNSManager, backupPrivateKey, fileObject) {
@@ -11,12 +12,15 @@ export async function storeFile(primaryFs, backupFilesystems, primNode, backupNo
   console.log("ADD TO PRIMARY");
 
   const cid = await addFileToPrimary(primNode, primaryFs, fileObject);
-  // console.log("Dag Type: ", cid.code);
+  console.log("Dag Type: ", cid.code);
   // console.log(primNode.blockstore.pins.getCodec(cid));
 
 
   const primShardCids = await getAllShardsCids(primNode, cid);
   const primShards = await retrieveShards(primaryFs, primShardCids);
+
+  // print size of first shard
+  console.log("Size of first shard: ", primShards[0].length);
   
   console.log("ADD TO BACKUP");
   addFileToBackups(backupNodes, backupFilesystems, backupIPNSManager, backupPrivateKey, primShards);
@@ -25,7 +29,9 @@ export async function storeFile(primaryFs, backupFilesystems, primNode, backupNo
 }
 
 async function addFileToPrimary(node, fs, fileObject) {
-  const cid = await fs.addFile(fileObject); // Store file in primary network
+  const cid = await fs.addFile(fileObject, {chunker: fixedSize({
+    chunkSize: 1024
+  })}); // Store file in primary network
   await node.pins.add(cid); // Ensure file shards are saved on the one node
   console.log(`File added to primary network with CID: ${cid}`);
   return cid;
@@ -51,6 +57,9 @@ async function addFileToBackups(nodes, filesystems, backupIPNSManager, backupPri
     });
 
     // Step 3: Generate parity shards
+
+    // print length of combinedShards
+    console.log("Length of combinedShards: ", combinedShards.length);
     const parityShards = generateParityShards(combinedShards);
 
     // Step 4: Store updated parity shards back into the backup

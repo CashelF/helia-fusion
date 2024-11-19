@@ -23,7 +23,7 @@ async function main() {
   const backupNodes = [backupNode1]
 
   // Store a file on primaryNode1 and distribute to backup nodes
-  const fileContent = await fileSys.readFile('./hello-world.txt')
+  const fileContent = await fileSys.readFile('./hello-world-small.txt')
   const fileObject = { content: fileContent };
   const cid = await storeFile(primFS1, backupFilesystems, primaryNode1, backupNodes, backupIPNSManager, backupPrivateKey, fileObject);
 

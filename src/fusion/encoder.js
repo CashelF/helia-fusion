@@ -26,18 +26,18 @@ function combineShards(existingBackup, primaryShard) {
  * @param {number} parityLength - The number of parity bytes to generate per shard.
  * @returns {Array<Buffer>} The parity shards.
  */
-function generateParityShards(combinedShards, parityLength = numFaults * 1024 * 1024) { 
+function generateParityShards(combinedShards, parityLength = numFaults * 1024) { 
   const encoder = initEncoder();
   const parityShards = combinedShards.map((shard) => {
     const shardBuffer = new Int32Array([...shard]); // Convert Buffer to Int32Array
     const fullBuffer = new Int32Array(shardBuffer.length + parityLength);
     fullBuffer.set(shardBuffer);
 
-    // encoder.encode(fullBuffer, parityLength); // Generate parity bytes in place
+    encoder.encode(fullBuffer, parityLength); // Generate parity bytes in place
     // ^ maybe is too slow, struggling encoding 1024 KB
     return Buffer.from(fullBuffer.buffer, fullBuffer.byteLength - parityLength, parityLength);
   });
-
+  console.log("Length of parityShards: ", parityShards.length);
   return parityShards;
 }
 
